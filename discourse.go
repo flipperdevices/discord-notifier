@@ -4,14 +4,18 @@ import (
 	"encoding/json"
 	"fmt"
 	hooks "github.com/Harvey1717/go-discord-hooks"
+	strip "github.com/grokify/html-strip-tags-go"
 	"github.com/imroc/req"
+	"github.com/valyala/fastjson"
 	"io/ioutil"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 )
 
 var discourseCategories map[int]string
+var newlineRx = regexp.MustCompile("[\n\r ]+")
 
 func getDiscourseCategories(url, token string) (map[int]string, error) {
 	res, err := req.Get(url+"categories.json", req.Header{"Api-Key": token})
@@ -36,6 +40,21 @@ func getDiscourseCategories(url, token string) (map[int]string, error) {
 	return categories, nil
 }
 
+func getDiscourseTopicSummary(url, token string, topicID int) string {
+	res, err := req.Get(fmt.Sprintf("%st/%d.json", url, topicID), req.Header{"Api-Key": token})
+	if err != nil {
+		return ""
+	}
+
+	cooked := fastjson.GetString(res.Bytes(), "post_stream", "posts", "0", "cooked")
+	if cooked == "" {
+		return ""
+	}
+	clean := newlineRx.ReplaceAllString(strip.StripTags(cooked), " ")
+
+	return truncateText(clean, 280) + "..."
+}
+
 func handleDiscourseWebhook(w http.ResponseWriter, r *http.Request) {
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
@@ -57,7 +76,7 @@ func isValidDiscourseUpdate(u discourseUpdate) bool {
 	if u.Topic.Archetype != "regular" {
 		return false
 	}
-	if time.Since(u.Topic.CreatedAt) > time.Second*30 {
+	if time.Since(u.Topic.CreatedAt) > time.Second*10 {
 		return false
 	}
 
@@ -73,6 +92,7 @@ func sendDiscourseNotification(u discourseUpdate) {
 	e := hooks.NewEmbed()
 	e.Title = fmt.Sprintf("[%s] %s", category, u.Topic.Title)
 	e.TitleURL = cfg.DiscourseURL + "t/" + u.Topic.Slug
+	e.Description = getDiscourseTopicSummary(cfg.DiscourseURL, cfg.DiscourseToken, u.Topic.ID)
 	e.Author = hooks.Author{
 		Text:    u.Topic.CreatedBy.Name,
 		IconURL: cfg.DiscourseURL + strings.ReplaceAll(u.Topic.CreatedBy.AvatarTemplate, "{size}", "128"),
@@ -83,6 +103,7 @@ func sendDiscourseNotification(u discourseUpdate) {
 
 type discourseUpdate struct {
 	Topic struct {
+		ID         int       `json:"id"`
 		Archetype  string    `json:"archetype"`
 		Slug       string    `json:"slug"`
 		Title      string    `json:"title"`
