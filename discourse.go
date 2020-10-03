@@ -94,7 +94,7 @@ func sendDiscourseNotification(u discourseUpdate) {
 	e.TitleURL = cfg.DiscourseURL + "t/" + u.Topic.Slug
 	e.Description = getDiscourseTopicSummary(cfg.DiscourseURL, cfg.DiscourseToken, u.Topic.ID)
 	e.Author = hooks.Author{
-		Text:    u.Topic.CreatedBy.Name,
+		Text:    u.Topic.CreatedBy.Username,
 		IconURL: cfg.DiscourseURL + strings.ReplaceAll(u.Topic.CreatedBy.AvatarTemplate, "{size}", "128"),
 	}
 	e.Send(cfg.DiscordWebhook,
@@ -110,7 +110,7 @@ type discourseUpdate struct {
 		CreatedAt  time.Time `json:"created_at"`
 		CategoryID int       `json:"category_id"`
 		CreatedBy  struct {
-			Name           string
+			Username       string `json:"username"`
 			AvatarTemplate string `json:"avatar_template"`
 		} `json:"created_by"`
 	} `json:"topic"`
