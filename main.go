@@ -22,5 +22,6 @@ func main() {
 
 	log.Println("Server started")
 	http.HandleFunc("/discourse", handleDiscourseWebhook)
+	http.HandleFunc("/ghost", handleGhostWebhook)
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }

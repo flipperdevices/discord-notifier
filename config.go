@@ -5,5 +5,7 @@ type config struct {
 	DiscourseToken  string `env:"DISCOURSE_TOKEN,required"`
 	DiscourseAvatar string `env:"DISCOURSE_AVATAR"`
 
+	GhostAvatar string `env:"GHOST_AVATAR"`
+
 	DiscordWebhook string `env:"DISCORD_WEBHOOK,required"`
 }
